@@ -120,6 +120,12 @@ const startGame = async () => {
   }
 };
 
+module.exports = {
+  createBoard,
+  setupBoard,
+  isValidPosition,
+};
+
 // Start the game
 if (require.main === module) {
   console.log(
