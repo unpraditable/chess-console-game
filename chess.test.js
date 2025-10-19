@@ -13,6 +13,7 @@ const {
   isValidKnightMove,
   isValidKingMove,
   isPathClear,
+  checkWinner,
 } = require("./chess");
 
 describe("Chess Game Unit Tests", () => {
@@ -346,6 +347,66 @@ describe("Chess Game Unit Tests", () => {
     test("should allow knight move from initial position", () => {
       const board = setupBoard();
       expect(isLegalMove(board, [7, 1], [5, 2])).toBe(true); // Ng1-f3
+    });
+  });
+
+  describe("Win Condition - checkWinner", () => {
+    test("should return null when both kings are present", () => {
+      const board = setupBoard();
+      expect(checkWinner(board)).toBe(null);
+    });
+
+    test("should detect white wins when black king is captured", () => {
+      const board = createBoard();
+      // Set up a scenario where black king is missing
+      board[7][4] = "K"; // White king
+      // Black king is missing (captured)
+      board[0][0] = "r"; // Other black pieces still exist
+      board[1][0] = "p";
+
+      expect(checkWinner(board)).toBe("White wins!");
+    });
+
+    test("should detect black wins when white king is captured", () => {
+      const board = createBoard();
+      // Set up a scenario where white king is missing
+      board[0][4] = "k"; // Black king
+      // White king is missing (captured)
+      board[7][0] = "R"; // Other white pieces still exist
+      board[6][0] = "P";
+
+      expect(checkWinner(board)).toBe("Black wins!");
+    });
+
+    test("should detect white wins with only kings on board", () => {
+      const board = createBoard();
+      board[7][4] = "K"; // White king only
+      // No black king
+
+      expect(checkWinner(board)).toBe("White wins!");
+    });
+
+    test("should detect black wins with only kings on board", () => {
+      const board = createBoard();
+      board[0][4] = "k"; // Black king only
+      // No white king
+
+      expect(checkWinner(board)).toBe("Black wins!");
+    });
+
+    test("should work with empty board except for one king", () => {
+      const board = createBoard();
+      board[3][3] = "K"; // Only white king on empty board
+
+      expect(checkWinner(board)).toBe("White wins!");
+    });
+
+    test("should return null with both kings in non-standard positions", () => {
+      const board = createBoard();
+      board[2][2] = "K"; // White king
+      board[5][5] = "k"; // Black king
+
+      expect(checkWinner(board)).toBe(null);
     });
   });
 });

@@ -202,6 +202,15 @@ const isLegalMove = (board, from, to) => {
   }
 };
 
+const checkWinner = (board) => {
+  const flat = board.flat();
+  const hasWhiteKing = flat.includes("K");
+  const hasBlackKing = flat.includes("k");
+  if (!hasWhiteKing) return "Black wins!";
+  if (!hasBlackKing) return "White wins!";
+  return null;
+};
+
 // Game Loop (Functional)
 const startGame = async () => {
   let board = setupBoard();
@@ -245,6 +254,12 @@ const startGame = async () => {
     }
 
     board = applyMove(board, from, to);
+    const winner = checkWinner(board);
+    if (winner) {
+      printBoard(board);
+      console.log(winner);
+      break;
+    }
 
     turnWhite = !turnWhite;
   }
@@ -268,6 +283,7 @@ module.exports = {
   isValidKingMove,
   isSameColor,
   isPathClear,
+  checkWinner,
 };
 
 // Start the game
