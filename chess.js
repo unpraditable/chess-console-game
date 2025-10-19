@@ -1,8 +1,6 @@
 const readline = require("readline");
 
-const createBoard = () => {
-  return Array.from({ length: 8 }, () => Array(8).fill(" "));
-};
+const createBoard = () => Array.from({ length: 8 }, () => Array(8).fill(" "));
 
 const setupBoard = () => {
   // White pieces are in uppercases
@@ -22,7 +20,7 @@ const setupBoard = () => {
 };
 
 const printBoard = (board) => {
-  console.log("\n a b c d e f g h");
+  console.log("\n  a b c d e f g h");
   board.forEach((row, i) => {
     console.log(
       `${8 - i} ${row.map((cell) => (cell === " " ? "." : cell)).join(" ")} ${
@@ -30,7 +28,7 @@ const printBoard = (board) => {
       }`
     );
   });
-  console.log(" a b c d e f g h\n");
+  console.log("  a b c d e f g h\n");
 };
 
 const parseInput = (input) => {
@@ -67,6 +65,11 @@ const movePiece = (board, from, to) => {
   return newBoard;
 };
 
+const isSameColor = (a, b) => {
+  if (!a || !b || a === " " || b === " ") return false;
+  return (a === a.toUpperCase()) === (b === b.toUpperCase());
+};
+
 const applyMove = (board, from, to) => {
   const piece = getPiece(board, from);
   let newBoard = movePiece(board, from, to);
@@ -75,6 +78,128 @@ const applyMove = (board, from, to) => {
   if (piece === "P" && to[0] === 0) newBoard[to[0]][to[1]] = "Q";
   if (piece === "p" && to[0] === 7) newBoard[to[0]][to[1]] = "q";
   return newBoard;
+};
+
+// Move validation
+const isValidPawnMove = (board, from, to, piece) => {
+  const [fromRow, fromCol] = from;
+  const [toRow, toCol] = to;
+  const direction = piece === "P" ? -1 : 1;
+  const startRow = piece === "P" ? 6 : 1;
+  const targetPiece = getPiece(board, to);
+
+  const rowDiff = toRow - fromRow;
+  const colDiff = Math.abs(toCol - fromCol);
+
+  // Forward move, must empty tile, must be straight 1 tile, except first move
+  if (colDiff === 0 && targetPiece === " ") {
+    if (rowDiff === direction) return true;
+    // First move, can move 2 tiles
+    if (fromRow === startRow && rowDiff === 2 * direction) {
+      return getPiece(board, [fromRow + direction, fromCol]) === " ";
+    }
+  }
+
+  // Capture, must be different color, and must not empty tile
+  if (colDiff === 1 && rowDiff === direction && targetPiece !== " ") {
+    return !isSameColor(piece, targetPiece);
+  }
+
+  return false;
+};
+
+const isValidRookMove = (board, from, to) => {
+  const [fromRow, fromCol] = from;
+  const [toRow, toCol] = to;
+
+  // Straight move rook movement pattern
+  if (fromRow !== toRow && fromCol !== toCol) {
+    return false;
+  }
+
+  // Check if path is clear
+  return isPathClear(board, from, to);
+};
+
+const isValidBishopMove = (board, from, to) => {
+  const [fromRow, fromCol] = from;
+  const [toRow, toCol] = to;
+
+  // Diagonal movement pattern
+  const rowDiff = Math.abs(toRow - fromRow);
+  const colDiff = Math.abs(toCol - fromCol);
+  if (rowDiff !== colDiff) {
+    return false;
+  }
+
+  // Check if path is clear
+  return isPathClear(board, from, to);
+};
+
+const isPathClear = (board, from, to) => {
+  const [fromRow, fromCol] = from;
+  const [toRow, toCol] = to;
+
+  // determine the direction of row and col, 1 or -1
+  const rowStep = Math.sign(toRow - fromRow);
+  const colStep = Math.sign(toCol - fromCol);
+
+  let currentRow = fromRow + rowStep;
+  let currentCol = fromCol + colStep;
+
+  // step it one by one, until it meets an obstacle
+  while (currentRow !== toRow || currentCol !== toCol) {
+    if (board[currentRow][currentCol] !== " ") {
+      return false;
+    }
+    currentRow += rowStep;
+    currentCol += colStep;
+  }
+
+  return true;
+};
+
+const isValidKnightMove = (from, to) => {
+  // Knight can move freely without checking emptyCell, as long as either rowDiff and colDiff is 2 AND 1, vice versa
+  const rowDiff = Math.abs(to[0] - from[0]);
+  const colDiff = Math.abs(to[1] - from[1]);
+  return (rowDiff === 2 && colDiff === 1) || (rowDiff === 1 && colDiff === 2);
+};
+
+const isValidKingMove = (from, to) => {
+  const rowDiff = Math.abs(to[0] - from[0]);
+  const colDiff = Math.abs(to[1] - from[1]);
+  return rowDiff <= 1 && colDiff <= 1;
+};
+
+const isLegalMove = (board, from, to) => {
+  const piece = getPiece(board, from);
+  const target = getPiece(board, to);
+  if (!piece || piece === " " || isSameColor(piece, target)) return false;
+
+  switch (piece.toLowerCase()) {
+    case "p": {
+      return isValidPawnMove(board, from, to, piece);
+    }
+    case "r": {
+      return isValidRookMove(board, from, to);
+    }
+    case "h": {
+      return isValidKnightMove(from, to);
+    }
+    case "b": {
+      return isValidBishopMove(board, from, to);
+    }
+    case "q":
+      // Queen is basically just a combinaton of Rook and Bishop
+      return (
+        isValidRookMove(board, from, to) || isValidBishopMove(board, from, to)
+      );
+    case "k":
+      return isValidKingMove(from, to);
+    default:
+      return false;
+  }
 };
 
 // Game Loop (Functional)
@@ -114,16 +239,35 @@ const startGame = async () => {
       continue;
     }
 
+    if (!isLegalMove(board, from, to)) {
+      console.log("Illegal move.");
+      continue;
+    }
+
     board = applyMove(board, from, to);
 
     turnWhite = !turnWhite;
   }
 };
 
+// Export functions for testing
 module.exports = {
   createBoard,
   setupBoard,
   isValidPosition,
+  getPiece,
+  isLegalMove,
+  applyMove,
+  movePiece,
+  parseInput,
+  printBoard,
+  isValidPawnMove,
+  isValidRookMove,
+  isValidBishopMove,
+  isValidKnightMove,
+  isValidKingMove,
+  isSameColor,
+  isPathClear,
 };
 
 // Start the game
